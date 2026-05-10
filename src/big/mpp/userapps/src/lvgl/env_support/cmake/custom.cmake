@@ -19,6 +19,9 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 # Set sources used for LVGL components
 file(GLOB_RECURSE SOURCES ${LVGL_ROOT_DIR}/src/*.c ${LVGL_ROOT_DIR}/src/*.S)
+# Exclude all vendor-specific GPU backends irrelevant to K230 (each causes cc1 segfaults under cross-compilation)
+# K230 uses vg_lite and sw; dma2d/nema_gfx/nxp/opengles/renesas/sdl are not applicable
+list(FILTER SOURCES EXCLUDE REGEX ".*/src/draw/(dma2d|nema_gfx|nxp|opengles|renesas|sdl)/.*")
 file(GLOB_RECURSE EXAMPLE_SOURCES ${LVGL_ROOT_DIR}/examples/*.c)
 file(GLOB_RECURSE DEMO_SOURCES ${LVGL_ROOT_DIR}/demos/*.c)
 file(GLOB_RECURSE THORVG_SOURCES ${LVGL_ROOT_DIR}/src/libs/thorvg/*.cpp ${LVGL_ROOT_DIR}/src/others/vg_lite_tvg/*.cpp)
@@ -63,15 +66,21 @@ if(NOT LV_CONF_BUILD_DISABLE_EXAMPLES)
 
     target_include_directories(lvgl_examples SYSTEM PUBLIC ${LVGL_ROOT_DIR}/examples)
     target_link_libraries(lvgl_examples PUBLIC lvgl)
+    # Suppress debug info for examples: large asset arrays produce enormous DWARF tables that OOM cc1
+    target_compile_options(lvgl_examples PRIVATE -g0)
 endif()
 
 # Build LVGL demos library
 if(NOT LV_CONF_BUILD_DISABLE_DEMOS)
+    # Exclude ebike demo: not enabled in lv_conf.h and contains multi-MB image assets that OOM cc1
+    list(FILTER DEMO_SOURCES EXCLUDE REGEX ".*/demos/ebike/.*")
     add_library(lvgl_demos ${DEMO_SOURCES})
     add_library(lvgl::demos ALIAS lvgl_demos)
 
     target_include_directories(lvgl_demos SYSTEM PUBLIC ${LVGL_ROOT_DIR}/demos)
     target_link_libraries(lvgl_demos PUBLIC lvgl)
+    # Suppress debug info for demos: large image asset arrays produce enormous DWARF tables that OOM cc1
+    target_compile_options(lvgl_demos PRIVATE -g0)
 endif()
 
 # Library and headers can be installed to system using make install

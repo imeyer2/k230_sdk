@@ -1,0 +1,100 @@
+FROM --platform=linux/amd64 ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    make \
+    gcc \
+    g++ \
+    git \
+    wget \
+    curl \
+    ca-certificates \
+    tar \
+    bzip2 \
+    xz-utils \
+    unzip \
+    python3 \
+    python3-pip \
+    python3-dev \
+    python-is-python3 \
+    bc \
+    bison \
+    flex \
+    libssl-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    rsync \
+    file \
+    cpio \
+    gawk \
+    sed \
+    patch \
+    diffutils \
+    findutils \
+    perl \
+    cmake \
+    ninja-build \
+    pkg-config \
+    zstd \
+    lz4 \
+    time \
+    libyaml-dev \
+    scons \
+    libconfuse2 \
+    dosfstools \
+    mtools \
+ && pip3 install --no-cache-dir scons pycryptodome gmssl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Wrapper for mcopy: mtools 4.0.32 has a bug where -b, -p, -s flags cause
+# "Internal error, size too big / Streamcache allocation problem" when using
+# -i (image file mode). Wrap mcopy to strip those flags and handle dirs manually.
+RUN cat > /usr/local/bin/mcopy << 'MCOPY_WRAPPER_EOF'
+#!/bin/bash
+REAL_MCOPY=/usr/bin/mcopy
+IMAGE=""
+SOURCES=()
+DEST=""
+RECURSIVE=false
+i=0
+args=("$@")
+while [[ $i -lt ${#args[@]} ]]; do
+    arg="${args[$i]}"
+    case "$arg" in
+        -i)  i=$((i+1)); IMAGE="${args[$i]}" ;;
+        -i*) IMAGE="${arg#-i}" ;;
+        -*)
+            if [[ "$arg" == *s* ]]; then RECURSIVE=true; fi
+            # Strip b, p, s flags; keep others
+            cleaned="${arg//b/}"; cleaned="${cleaned//p/}"; cleaned="${cleaned//s/}"
+            [[ "$cleaned" == "-" || "$cleaned" == "" ]] || true  # discard stripped flags
+            ;;
+        ::*) DEST="$arg" ;;
+        *)   SOURCES+=("$arg") ;;
+    esac
+    i=$((i+1))
+done
+if [[ -z "$IMAGE" ]]; then exec "$REAL_MCOPY" "$@"; fi
+_copy_to_fat() {
+    local src="$1" fat_dest="$2"
+    if [[ -f "$src" ]]; then
+        MTOOLS_SKIP_CHECK=1 "$REAL_MCOPY" -i "$IMAGE" "$src" "${fat_dest%/}/"
+    elif [[ -d "$src" ]] && $RECURSIVE; then
+        local dname; dname=$(basename "$src")
+        local fat_dir
+        if [[ "$fat_dest" == "::" ]]; then fat_dir="::${dname}"
+        else fat_dir="${fat_dest%/}/${dname}"; fi
+        MTOOLS_SKIP_CHECK=1 mmd -i "$IMAGE" "$fat_dir" 2>/dev/null || true
+        for item in "$src"/*; do
+            [[ -e "$item" ]] || continue
+            _copy_to_fat "$item" "$fat_dir"
+        done
+    fi
+}
+for SRC in "${SOURCES[@]}"; do _copy_to_fat "$SRC" "${DEST:-::}"; done
+MCOPY_WRAPPER_EOF
+RUN chmod +x /usr/local/bin/mcopy
+
+WORKDIR /work

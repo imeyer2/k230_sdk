@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 include(../../../../nncase/examples/cmake/Riscv64.cmake)
 
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
+# Strip -g from Debug flags: prevents cc1 OOM/segfaults under QEMU x86_64 emulation on ARM64
+set(CMAKE_C_FLAGS_DEBUG "-O0")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 
 project(sample-lvgl)
 set(nncase_sdk_root "${PROJECT_SOURCE_DIR}/../../../../nncase")
@@ -15,6 +18,7 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
     include(CheckIPOSupported)
     check_ipo_supported(RESULT supported OUTPUT error)
 endif()
+# Debug build (-O0): avoids cc1 segfaults from optimizer memory exhaustion in Docker
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -40,6 +44,7 @@ if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
         message(STATUS "IPO / LTO not supported: <${error}>")
     endif()
 endif()
+# MinSizeRel intentionally skips LTO to prevent cc1 segfaults
 
 target_link_libraries(${PROJECT_NAME}.elf lvgl lvgl::examples lvgl::demos lvgl::thorvg vg_lite vg_lite_util m vo connector vb sys)
 install(TARGETS ${PROJECT_NAME}.elf DESTINATION elf)

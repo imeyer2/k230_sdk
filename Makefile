@@ -213,7 +213,7 @@ mpp-kernel: check_src
 	@export PATH=$(RTT_EXEC_PATH):$(PATH); \
 	export RTSMART_SRC_DIR=$(K230_SDK_ROOT)/$(RT-SMART_SRC_PATH); \
 	cd $(MPP_SRC_PATH); \
-	make -C kernel || exit $?; \
+	make -C kernel || exit $$?; \
 	cd -;
 
 .PHONY: mpp-kernel-clean
@@ -225,14 +225,14 @@ mpp-kernel-clean:
 	cd -;
 
 .PHONY: mpp-apps
-mpp-apps:check_src
+mpp-apps: check_src mpp-kernel
 	@export PATH=$(RTT_EXEC_PATH):$(PATH); \
 	export RTSMART_SRC_DIR=$(K230_SDK_ROOT)/$(RT-SMART_SRC_PATH); \
 	cd $(MPP_SRC_DIR); \
-	make -C userapps/src || exit $?; \
+	make -C userapps/src || exit $$?; \
 	mkdir -p userapps/sample/elf; \
 	mkdir -p userapps/sample/fastboot_elf; \
-	make -C userapps/sample || exit $?; \
+	make -C userapps/sample || exit $$?; \
 	mkdir -p $(RTSMART_SRC_DIR)/userapps/root/bin/; \
 	source $(K230_SDK_ROOT)/.config; [ "$${CONFIG_BOARD_K230D}" != "y" ] && cp userapps/sample/fastboot_elf/* $(RTSMART_SRC_DIR)/userapps/root/bin/; \
 	cp $(RTSMART_SRC_DIR)/init.sh $(RTSMART_SRC_DIR)/userapps/root/bin/; \
@@ -252,7 +252,7 @@ mpp-middleware:
 	@export PATH=$(RTT_EXEC_PATH):$(PATH); \
 	export RTSMART_SRC_DIR=$(K230_SDK_ROOT)/$(RT-SMART_SRC_PATH); \
 	cd $(MPP_SRC_DIR); \
-	make -C middleware || exit $?; \
+	make -C middleware || exit $$?; \
 	cd -;
 
 .PHONY: mpp-middleware-clean
@@ -310,8 +310,8 @@ cdk-kernel: linux
 	@export PATH=$(RTT_EXEC_PATH):$(LINUX_EXEC_PATH):$(PATH);export RTSMART_SRC_DIR=$(K230_SDK_ROOT)/$(RT-SMART_SRC_PATH);export LINUX_BUILD_DIR=$(LINUX_BUILD_DIR); \
 	cd $(K230_SDK_ROOT)/$(CDK_SRC_PATH)/kernel/ipcm; \
 	make clean; \
-	make PLATFORM=k230 CFG=k230_riscv_rtsmart_config all || exit $?; \
-	make PLATFORM=k230 CFG=k230_riscv_linux_config all || exit $?; \
+	make PLATFORM=k230 CFG=k230_riscv_rtsmart_config all || exit $$?; \
+	make PLATFORM=k230 CFG=k230_riscv_linux_config all || exit $$?; \
 	cd -
 
 
@@ -331,7 +331,7 @@ cdk-kernel-clean:
 .PHONY: cdk-user
 cdk-user:check_src
 	@export PATH=$(RTT_EXEC_PATH):$(LINUX_EXEC_PATH):$(PATH);export RTSMART_SRC_DIR=$(K230_SDK_ROOT)/$(RT-SMART_SRC_PATH);export LINUX_BUILD_DIR=$(LINUX_BUILD_DIR); \
-	cd $(CDK_SRC_PATH)/user/;make || exit $?;cd -
+	cd $(CDK_SRC_PATH)/user/;make || exit $$?;cd -
 
 .PHONY: cdk-user-install
 cdk-user-install:check_src
@@ -355,7 +355,7 @@ rt-smart-apps: defconfig prepare_memory  check_src
 	cd $(RT-SMART_SRC_PATH)/userapps; \
 	mkdir -p $(RTSMART_SRC_DIR)/userapps/root/bin/; \
 	cp configs/def_config_riscv64 .config; \
-	scons  -j16    || exit $?; \
+	scons  -j2    || exit $$?; \
 	cd -;
 	python3 $(RT-SMART_SRC_PATH)/tools/mkromfs.py $(RT-SMART_SRC_PATH)/userapps/root $(RT-SMART_SRC_PATH)/kernel/bsp/maix3/applications/romfs.c
 
@@ -366,13 +366,13 @@ rt-smart-apps-clean: defconfig
 
 
 .PHONY: rt-smart-kernel
-rt-smart-kernel: defconfig  prepare_memory  check_src
+rt-smart-kernel: defconfig  prepare_memory  check_src rt-smart-apps
 	@export RTT_CC=$(RTT_CC); \
 	export RTT_CC_PREFIX=$(RTT_CC_PREFIX); \
 	export RTT_EXEC_PATH=$(RTT_EXEC_PATH); \
 	cd $(RT-SMART_SRC_PATH)/kernel/bsp/maix3; \
 	rm -f rtthread.elf; \
-	scons   -j16    || exit $?; \
+	scons   -j2    || exit $$?; \
 	mkdir -p $(RTT_SDK_BUILD_DIR); \
 	cp rtthread.bin rtthread.elf $(RTT_SDK_BUILD_DIR)/; \
 	cd -;
@@ -386,14 +386,14 @@ rt-smart-kernel-clean: defconfig prepare_memory
 .PHONY: linux-config
 linux-config:
 	cd $(LINUX_SRC_PATH); \
-	make ARCH=riscv $(LINUX_KERNEL_DEFCONFIG) O=$(LINUX_BUILD_DIR) CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) ARCH=riscv || exit $?; \
+	make ARCH=riscv $(LINUX_KERNEL_DEFCONFIG) O=$(LINUX_BUILD_DIR) CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) ARCH=riscv || exit $$?; \
 	cd -
 
 .PHONY: linux-build
 linux-build:
 	cd $(LINUX_SRC_PATH); \
-	make -j16 O=$(LINUX_BUILD_DIR) CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) ARCH=riscv || exit $?; \
-	make O=$(LINUX_BUILD_DIR) modules_install  INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=$(LINUX_BUILD_DIR)/rootfs/ CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) ARCH=riscv || exit $?; \
+	make -j16 O=$(LINUX_BUILD_DIR) CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) ARCH=riscv || exit $$?; \
+	make O=$(LINUX_BUILD_DIR) modules_install  INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=$(LINUX_BUILD_DIR)/rootfs/ CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) ARCH=riscv || exit $$?; \
 	cd -
 
 .PHONY: linux-menuconfig
@@ -428,7 +428,7 @@ big-core-opensbi: rt-smart-kernel
 	cd $(OPENSBI_SRC_PATH); \
 	export CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX); \
 	export PLATFORM=kendryte/fpgac908; \
-	make FW_FDT_PATH=hw.dtb FW_PAYLOAD_PATH=rtthread.bin O=$(BIG_OPENSBI_BUILD_DIR) OPENSBI_QUIET=1 || exit $?; \
+	make FW_FDT_PATH=hw.dtb FW_PAYLOAD_PATH=rtthread.bin O=$(BIG_OPENSBI_BUILD_DIR) OPENSBI_QUIET=1 || exit $$?; \
 	cd -
 rtt_update_romfs:
 	@export RTT_CC=$(RTT_CC); \
@@ -436,7 +436,7 @@ rtt_update_romfs:
 	export RTT_EXEC_PATH=$(RTT_EXEC_PATH); \
 	cd $(RT-SMART_SRC_PATH)/kernel/bsp/maix3; \
 	rm -f rtthread.elf; \
-	scons   -j16    || exit $?; \
+	scons   -j2    || exit $$?; \
 	mkdir -p $(RTT_SDK_BUILD_DIR); \
 	cp rtthread.bin rtthread.elf $(RTT_SDK_BUILD_DIR)/; \
 	cd -;
@@ -445,7 +445,7 @@ rtt_update_romfs:
 	cd $(OPENSBI_SRC_PATH); \
 	export CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX); \
 	export PLATFORM=kendryte/fpgac908; \
-	$(MAKE) FW_FDT_PATH=hw.dtb FW_PAYLOAD_PATH=rtthread.bin O=$(BIG_OPENSBI_BUILD_DIR) OPENSBI_QUIET=1 || exit $?; \
+	$(MAKE) FW_FDT_PATH=hw.dtb FW_PAYLOAD_PATH=rtthread.bin O=$(BIG_OPENSBI_BUILD_DIR) OPENSBI_QUIET=1 || exit $$?; \
 	cd -
 
 .PHONY: big-core-opensbi-clean
@@ -463,7 +463,7 @@ rt-smart-clean: mpp-clean big-core-opensbi-clean rt-smart-kernel-clean rt-smart-
 little-core-opensbi: linux
 	@mkdir -p $(LITTLE_OPENSBI_BUILD_DIR); \
 	cd $(OPENSBI_SRC_PATH); \
-	make CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) PLATFORM=generic FW_PAYLOAD_PATH=$(LINUX_BUILD_DIR)/arch/riscv/boot/Image  O=$(LITTLE_OPENSBI_BUILD_DIR) K230_LITTLE_CORE=1 OPENSBI_QUIET=1 || exit $?; \
+	make CROSS_COMPILE=$(LINUX_EXEC_PATH)/$(LINUX_CC_PREFIX) PLATFORM=generic FW_PAYLOAD_PATH=$(LINUX_BUILD_DIR)/arch/riscv/boot/Image  O=$(LITTLE_OPENSBI_BUILD_DIR) K230_LITTLE_CORE=1 OPENSBI_QUIET=1 || exit $$?; \
 	cd -
 
 
@@ -476,14 +476,14 @@ little-core-opensbi-clean:
 buildroot: defconfig prepare_memory  check_src
 	@export PATH=$(LINUX_EXEC_PATH):$(PATH); \
 	cd $(BUILDROOT-EXT_SRC_PATH); \
-	make CONF=$(BUILDROOT_DEFCONFIG) BRW_BUILD_DIR=$(BUILDROOT_BUILD_DIR) BR2_TOOLCHAIN_EXTERNAL_PATH=$(LINUX_EXEC_PATH)/../ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=$(LINUX_CC_PREFIX) || exit $?; \
+	make CONF=$(BUILDROOT_DEFCONFIG) BRW_BUILD_DIR=$(BUILDROOT_BUILD_DIR) BR2_TOOLCHAIN_EXTERNAL_PATH=$(LINUX_EXEC_PATH)/../ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=$(LINUX_CC_PREFIX) || exit $$?; \
 	cd -
 
 .PHONY: buildroot-rebuild
 buildroot-rebuild: defconfig  prepare_memory check_src
 	@export PATH=$(LINUX_EXEC_PATH):$(PATH); \
 	cd $(BUILDROOT-EXT_SRC_PATH); \
-	make CONF=$(BUILDROOT_DEFCONFIG) BRW_BUILD_DIR=$(BUILDROOT_BUILD_DIR) BR2_TOOLCHAIN_EXTERNAL_PATH=$(LINUX_EXEC_PATH)/../ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=$(LINUX_CC_PREFIX) build || exit $?; \
+	make CONF=$(BUILDROOT_DEFCONFIG) BRW_BUILD_DIR=$(BUILDROOT_BUILD_DIR) BR2_TOOLCHAIN_EXTERNAL_PATH=$(LINUX_EXEC_PATH)/../ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX=$(LINUX_CC_PREFIX) build || exit $$?; \
 	cd -
 
 .PHONY: buildroot-menuconfig
@@ -511,19 +511,19 @@ buildroot-clean: defconfig
 uboot: defconfig prepare_memory check_src
 	@export PATH=$(LINUX_EXEC_PATH):$(PATH);export CROSS_COMPILE=$(LINUX_CC_PREFIX);export ARCH=riscv; \
 	cd $(UBOOT_SRC_PATH); \
-	make $(UBOOT_DEFCONFIG) O=$(UBOOT_BUILD_DIR) || exit $?;make -C $(UBOOT_BUILD_DIR) || exit $?; \
+	make $(UBOOT_DEFCONFIG) O=$(UBOOT_BUILD_DIR) || exit $$?;make -C $(UBOOT_BUILD_DIR) || exit $$?; \
 	cd -
 burntool:
 	@export PATH=$(LINUX_EXEC_PATH):$(PATH);export CROSS_COMPILE=$(LINUX_CC_PREFIX);export ARCH=riscv; \
 	cd $(UBOOT_SRC_PATH); \
-	make $(BURNTOOL_DEFCONFIG) O=$(BURNTOOL_BUILD_DIR) || exit $?;make -C $(BURNTOOL_BUILD_DIR) || exit $?; \
+	make $(BURNTOOL_DEFCONFIG) O=$(BURNTOOL_BUILD_DIR) || exit $$?;make -C $(BURNTOOL_BUILD_DIR) || exit $$?; \
 	cd -
 
 .PHONY: uboot-rebuild
 uboot-rebuild: defconfig  prepare_memory  check_src
 	@export PATH=$(LINUX_EXEC_PATH):$(PATH);export CROSS_COMPILE=$(LINUX_CC_PREFIX);export ARCH=riscv; \
 	cd $(UBOOT_SRC_PATH); \
-	make -C $(UBOOT_BUILD_DIR) || exit $?; \
+	make -C $(UBOOT_BUILD_DIR) || exit $$?; \
 	cd -
 
 .PHONY: uboot-menuconfig

@@ -31,7 +31,7 @@ $(LIB): $(OBJS)
 
 k230dwmapgen:
 	cmake -S $(LOCAL_SRC_DIR)/dewarp/k230dwmapgen -B build
-	cmake --build build -j
+	cmake --build build -j1
 
 $(DWCFGS): %.bin : %.yml k230dwmapgen
 	./build/k230dwmapgen-dump < $< > $@

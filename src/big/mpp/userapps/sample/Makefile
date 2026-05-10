@@ -7,7 +7,8 @@ all:
 	@mkdir -p $(FASTBOOT_BUILD_DIR)
 	@mkdir -p $(TRIPLE_CAMERA_BUILD_DIR)
 	@mkdir -p $(SAMPLE_LVGL_BUILD_DIR)
-	@cmake -S sample_lvgl -B $(SAMPLE_LVGL_BUILD_DIR) && cmake --build $(SAMPLE_LVGL_BUILD_DIR) -j && make -C $(SAMPLE_LVGL_BUILD_DIR) install
+	@rm -f $(SAMPLE_LVGL_BUILD_DIR)/CMakeCache.txt
+	@cmake -S sample_lvgl -B $(SAMPLE_LVGL_BUILD_DIR) && cmake --build $(SAMPLE_LVGL_BUILD_DIR) -j1 && make -C $(SAMPLE_LVGL_BUILD_DIR) install
 	$(MAKE) -C tiger
 	$(MAKE) -C sample_gpu_cube
 	@cd sample_audio; make || exit 1
